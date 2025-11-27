@@ -41,7 +41,7 @@ The fat JAR will be at:
 
 - `build/libs/kafka-load-generator-0.0.1-SNAPSHOT.jar`
 
-## Run Locust master
+## Run Locust master (bare Python)
 
 From the project root (where `locustfile.py` is):
 
@@ -50,6 +50,26 @@ locust --master --web-port 8089 --expect-workers=1
 ```
 
 Open the UI at `http://localhost:8089`.
+
+## Run Locust master with Docker
+
+If you prefer not to install Python/Locust directly, you can run the master using Docker:
+
+```bash
+# From the project root (where locustfile.py lives)
+docker run --rm \
+  -p 8089:8089 \   # Locust web UI
+  -p 5557:5557 \   # RPC port for workers
+  -p 5558:5558 \   # Stats/communication
+  -v "$PWD:/mnt/locust" \
+  locustio/locust \
+  -f /mnt/locust/locustfile.py \
+  --master \
+  --web-port 8089 \
+  --expect-workers=1
+```
+
+Then open the UI at `http://localhost:8089`.
 
 ## Run the Java worker
 
@@ -154,6 +174,8 @@ Rule of thumb:
 
 ## Running multiple workers
 
+### Multiple Java workers (bare JAR)
+
 You can start several Java workers (on the same or different machines):
 
 ```bash
@@ -167,6 +189,33 @@ Then start Locust master with matching `--expect-workers`:
 ```bash
 locust --master --web-port 8089 --expect-workers=3
 ```
+
+### Docker / docker-compose setup
+
+This project also includes a `Dockerfile` and `docker-compose.yml` so you can run:
+
+- Locust master (Python, in a container)
+- Optional Python workers
+- Java `locust4j` worker (this Spring Boot app)
+
+From the project root:
+
+```bash
+docker-compose up --build
+```
+
+This will:
+
+- Start `locust-master` with the UI at `http://localhost:8089`.
+- Start a Python `locust-worker` (optional, configurable in `docker-compose.yml`).
+- Build and start the `java-worker` service, which runs the Spring Boot app as a locust4j worker and connects to `locust-master`.
+
+The Java worker inside Docker is configured to talk to the Locust master via:
+
+- `locust.master-host=locust-master`
+- `locust.master-port=5557`
+
+These are passed as JVM system properties from `docker-compose.yml` so they override the values in `application.yml`.
 
 ## Customizing the payload
 

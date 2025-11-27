@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  locust-master:
+    image: locustio/locust
+    command: >
+      -f /mnt/locust/locustfile.py
+      --master
+      --web-port 8089
+      --expect-workers=2
+    ports:
+      - "8089:8089"   # Locust web UI
+      - "5557:5557"   # RPC port for workers
+      - "5558:5558"   # Stats/communication
+    volumes:
+      - ./:/mnt/locust
+    environment:
+      - LOCUST_MODE=master
+
+  # Optional Python worker (you can scale or remove this)
+  locust-worker:
+    image: locustio/locust
+    command: >
+      -f /mnt/locust/locustfile.py
+      --worker
+      --master-host locust-master
+    depends_on:
+      - locust-master
+    volumes:
+      - ./:/mnt/locust
+    environment:
+      - LOCUST_MODE=worker
+
+  # Java-based locust4j worker (your Spring Boot app)
+  java-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - locust-master
+    environment:
+      # Override Spring Boot properties to point locust4j at the master service
+      - SPRING_APPLICATION_NAME=kafka-load-generator
+      - LOCUST_MASTER_HOST=locust-master
+      - LOCUST_MASTER_PORT=5557
+    command: >
+      sh -c "java
+      -Dlocust.master-host=${LOCUST_MASTER_HOST:-locust-master}
+      -Dlocust.master-port=${LOCUST_MASTER_PORT:-5557}
+      -jar app.jar"
