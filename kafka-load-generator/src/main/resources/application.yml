@@ -1,0 +1,15 @@
+server:
+  port: 8080  # no HTTP server needed for the worker
+
+kafka:
+  bootstrap-servers: "localhost:9092"  # change to your Kafka broker(s)
+  topic: "load-test-topic"             # ensure this topic exists
+
+load:
+  target-tps: 5000
+  message-size-bytes: 1024
+
+locust:
+  master-host: "localhost"  # Locust master host
+  master-port: 5557          # Locust master port
+  worker-name: "kafka-worker-1"
